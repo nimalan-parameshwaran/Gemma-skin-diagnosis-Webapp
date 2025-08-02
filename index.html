@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemma 3n Skin Diagnosis App</title>
+    <!--
+    The entire application is self-contained in this single HTML file.
+    Tailwind CSS is loaded via a CDN for simple, no-build-step styling.
+    The Inter font is used for a clean, modern look.
+    -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex items-center justify-center p-4">
+    <div class="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 space-y-8">
+        <header class="text-center">
+            <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-50">Skin Disease Diagnosis App</h1>
+            <p class="mt-2 text-lg text-gray-600 dark:text-gray-400">
+                Utilizing Gemma 3n for remote, privacy-first skin condition analysis.
+            </p>
+        </header>
+
+        <main class="space-y-6">
+            <!-- Image Upload and Preview Section -->
+            <div class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl">
+                <label for="file-upload" class="cursor-pointer text-blue-500 hover:text-blue-600 font-medium">
+                    <span class="inline-flex items-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span id="upload-text">Upload Image</span>
+                    </span>
+                </label>
+                <input id="file-upload" type="file" accept="image/*" class="sr-only" onchange="handleFileChange(event)">
+                <div id="image-preview-container" class="mt-4 w-64 h-64 hidden border rounded-xl overflow-hidden shadow-md">
+                    <img id="image-preview" src="#" alt="Preview" class="w-full h-full object-cover">
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <div class="flex justify-center">
+                <button id="diagnose-button" onclick="handleDiagnose()" class="w-full sm:w-auto px-8 py-3 text-lg font-semibold text-white bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-blue-400 disabled:cursor-not-allowed" disabled>
+                    Get Diagnosis
+                </button>
+            </div>
+
+            <!-- Diagnosis Result Section -->
+            <div id="diagnosis-result-container" class="bg-gray-50 dark:bg-gray-700 p-6 rounded-xl shadow-inner space-y-4 hidden">
+                <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-50">Diagnosis Result</h2>
+                <div id="diagnosis-result" class="prose dark:prose-invert">
+                    <!-- Diagnosis will be injected here -->
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 p-4 rounded-xl text-center font-medium hidden">
+                <!-- Error message will be injected here -->
+            </div>
+        </main>
+
+        <footer class="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
+            <p>
+                **Disclaimer:** This app is for informational purposes only and is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // === JavaScript Logic ===
+        const diagnoseButton = document.getElementById('diagnose-button');
+        const fileInput = document.getElementById('file-upload');
+        const uploadText = document.getElementById('upload-text');
+        const imagePreview = document.getElementById('image-preview');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        const diagnosisResultContainer = document.getElementById('diagnosis-result-container');
+        const diagnosisResult = document.getElementById('diagnosis-result');
+        const errorMessage = document.getElementById('error-message');
+        let imageFile = null;
+
+        /**
+         * Converts a File object to a Base64 string.
+         * This is necessary to send the image data to the Gemini API.
+         * @param {File} file - The image file to convert.
+         * @returns {Promise<string>} A Promise that resolves with the Base64 string.
+         */
+        const fileToBase64 = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Get the data part
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(file);
+            });
+        };
+
+        /**
+         * Handles the file input change event.
+         * Creates a preview URL for the selected image and updates the UI.
+         * @param {Event} event - The file input change event.
+         */
+        const handleFileChange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                imageFile = file;
+                const previewUrl = URL.createObjectURL(file);
+                imagePreview.src = previewUrl;
+                imagePreviewContainer.classList.remove('hidden');
+                uploadText.textContent = 'Change Image';
+                diagnoseButton.disabled = false;
+                diagnosisResultContainer.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+            } else {
+                imageFile = null;
+                imagePreviewContainer.classList.add('hidden');
+                uploadText.textContent = 'Upload Image';
+                diagnoseButton.disabled = true;
+            }
+        };
+
+        /**
+         * Simulates a diagnosis by calling the Gemini API.
+         * NOTE: This is a simulation using a hosted API. For true on-device
+         * functionality, you would need to use a client-side library like
+         * MediaPipe or the Google AI Edge SDK.
+         */
+        const handleDiagnose = async () => {
+            if (!imageFile) {
+                showError('Please upload an image first.');
+                return;
+            }
+
+            // UI state for loading
+            diagnoseButton.disabled = true;
+            diagnoseButton.innerHTML = `
+                <div class="flex items-center justify-center space-x-2">
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Diagnosing...</span>
+                </div>
+            `;
+            diagnosisResultContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+
+            try {
+                // Convert the image to a Base64 string.
+                const base64ImageData = await fileToBase64(imageFile);
+
+                // Construct the prompt for the model.
+                const prompt = `
+                    You are an AI assistant specialized in analyzing skin conditions from images. Your task is to provide a potential diagnosis and a brief description based on the provided image.
+                    
+                    Follow these rules:
+                    - Analyze the image carefully.
+                    - Provide a single, plausible diagnosis based on visual cues.
+                    - The diagnosis should be in the format: "Potential Diagnosis: [Disease Name]".
+                    - Follow this with a brief, one-paragraph description of the disease.
+                    - Do not provide medical advice or recommend treatment.
+                    - Conclude with the following disclaimer: "Please consult a qualified medical professional for an accurate diagnosis and treatment plan."
+                `;
+
+                // Set up the request payload for the Gemini API.
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: imageFile.type, data: base64ImageData } }
+                        ]
+                    }]
+                };
+
+                // The API endpoint and key.
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                // Make the fetch call to the Gemini API.
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                // Handle HTTP errors.
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                // Check for valid response.
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    showDiagnosis(text);
+                } else {
+                    throw new Error('No valid diagnosis found in the API response.');
+                }
+
+            } catch (err) {
+                console.error('Diagnosis error:', err);
+                showError('Failed to get a diagnosis. Please try again.');
+            } finally {
+                // Reset button state
+                diagnoseButton.innerHTML = 'Get Diagnosis';
+                diagnoseButton.disabled = false;
+            }
+        };
+
+        /**
+         * Displays the diagnosis result in the UI.
+         * @param {string} text - The diagnosis text from the model.
+         */
+        const showDiagnosis = (text) => {
+            diagnosisResult.innerHTML = text.split('\n').map(line => `<p>${line}</p>`).join('');
+            diagnosisResultContainer.classList.remove('hidden');
+        };
+
+        /**
+         * Displays an error message in the UI.
+         * @param {string} message - The error message to display.
+         */
+        const showError = (message) => {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        };
+    </script>
+</body>
+</html>
